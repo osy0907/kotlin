@@ -14,11 +14,11 @@ import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.transformers.FirProviderInterceptorForSupertypeResolver
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.*
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirDeclarationDesignation
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirDeclarationDesignationWithFile
 import org.jetbrains.kotlin.idea.fir.low.level.api.element.builder.FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculator
 
 internal class FirDesignatedBodyResolveTransformerForIDE(
-    private val firFile: FirFile,
-    designation: FirDeclarationDesignation,
+    private val designation: FirDeclarationDesignationWithFile,
     session: FirSession,
     scopeSession: ScopeSession,
     towerDataContextCollector: FirTowerDataContextCollector? = null,
@@ -37,7 +37,7 @@ internal class FirDesignatedBodyResolveTransformerForIDE(
     firTowerDataContextCollector = towerDataContextCollector,
     firProviderInterceptor = firProviderInterceptor,
 ) {
-    private val ideDeclarationTransformer = IDEDeclarationTransformer(designation.toDesignationIterator())
+    private val ideDeclarationTransformer = IDEDeclarationTransformer(designation)
 
     @Suppress("NAME_SHADOWING")
     override fun transformDeclarationContent(declaration: FirDeclaration, data: ResolutionMode): FirDeclaration =
@@ -46,10 +46,10 @@ internal class FirDesignatedBodyResolveTransformerForIDE(
         }
 
     override fun needReplacePhase(firDeclaration: FirDeclaration): Boolean =
-        ideDeclarationTransformer.needReplacePhase(firDeclaration)
+        ideDeclarationTransformer.needReplacePhase
 
     override fun transformDeclaration() {
-        firFile.transform<FirFile, ResolutionMode>(this, ResolutionMode.ContextDependent)
+        designation.firFile.transform<FirFile, ResolutionMode>(this, ResolutionMode.ContextDependent)
     }
 }
 

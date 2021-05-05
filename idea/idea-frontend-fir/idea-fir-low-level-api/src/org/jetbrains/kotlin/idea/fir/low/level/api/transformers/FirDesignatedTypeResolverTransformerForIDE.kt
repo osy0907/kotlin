@@ -10,17 +10,16 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.transformers.FirTypeResolveTransformer
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirDeclarationDesignation
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirDeclarationDesignationWithFile
 import org.jetbrains.kotlin.idea.fir.low.level.api.transformers.FirLazyTransformerForIDE.Companion.ensurePhase
 
 class FirDesignatedTypeResolverTransformerForIDE(
-    private val originalFile: FirFile,
-    private val designation: FirDeclarationDesignation,
+    private val designation: FirDeclarationDesignationWithFile,
     session: FirSession,
     scopeSession: ScopeSession,
-): FirLazyTransformerForIDE, FirTypeResolveTransformer(session, scopeSession) {
+) : FirLazyTransformerForIDE, FirTypeResolveTransformer(session, scopeSession) {
 
-    private val ideDeclarationTransformer = IDEDeclarationTransformer(FirDesignationIterator(designation.fullDesignation))
+    private val ideDeclarationTransformer = IDEDeclarationTransformer(designation)
 
     @Suppress("NAME_SHADOWING")
     override fun transformRegularClass(regularClass: FirRegularClass, data: Any?): FirStatement {
@@ -37,7 +36,7 @@ class FirDesignatedTypeResolverTransformerForIDE(
     }
 
     override fun transformDeclaration() {
-        designation.ensurePhase(FirResolvePhase.TYPES, exceptLast = true)
-        originalFile.transform<FirFile, Any?>(this, null)
+        designation.ensurePhase(FirResolvePhase.TYPES, exceptTarget = true)
+        designation.firFile.transform<FirFile, Any?>(this, null)
     }
 }
