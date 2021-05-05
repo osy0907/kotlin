@@ -21,9 +21,15 @@ import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.idea.MainFunctionDetector
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.isFromJava
+import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.kotlin.load.java.descriptors.JavaMethodDescriptor
 import org.jetbrains.kotlin.load.java.lazy.descriptors.isJavaField
+import org.jetbrains.kotlin.load.java.typeEnhancement.hasEnhancedNullability
+import org.jetbrains.kotlin.types.UnwrappedType
+import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext
 
 object JvmIrMangler : IrBasedKotlinManglerImpl() {
     private object ExportChecker : IrExportCheckerVisitor() {
@@ -36,6 +42,12 @@ object JvmIrMangler : IrBasedKotlinManglerImpl() {
 
         override fun addReturnTypeSpecialCase(irFunction: IrFunction): Boolean =
             irFunction.isFromJava()
+
+        override fun mangleTypePlatformSpecific(type: IrType, tBuilder: StringBuilder) {
+            if (type.hasAnnotation(JvmAnnotationNames.ENHANCED_NULLABILITY_ANNOTATION)) {
+                tBuilder.append(MangleConstant.ENHANCED_NULLABILITY_MARK)
+            }
+        }
     }
 
     override fun getExportChecker(): KotlinExportChecker<IrDeclaration> = ExportChecker
@@ -71,6 +83,13 @@ class JvmDescriptorMangler(private val mainDetector: MainFunctionDetector?) : De
             // properties with the same signature on the same level.
             // For more details see JvmPlatformOverloadsSpecificityComparator.kt
             return if (isJavaField) MangleConstant.JAVA_FIELD_SUFFIX else null
+        }
+
+        override fun mangleTypePlatformSpecific(type: UnwrappedType, tBuilder: StringBuilder) {
+            // Disambiguate between 'double' and '@NotNull java.lang.Double' types in mixed Java/Kotlin class hierarchies
+            if (SimpleClassicTypeSystemContext.hasEnhancedNullability(type)) {
+                tBuilder.appendSignature(MangleConstant.ENHANCED_NULLABILITY_MARK)
+            }
         }
     }
 

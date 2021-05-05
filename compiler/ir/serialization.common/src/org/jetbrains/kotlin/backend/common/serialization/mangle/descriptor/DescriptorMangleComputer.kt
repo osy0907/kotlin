@@ -10,9 +10,7 @@ import org.jetbrains.kotlin.backend.common.serialization.mangle.MangleConstant
 import org.jetbrains.kotlin.backend.common.serialization.mangle.MangleMode
 import org.jetbrains.kotlin.backend.common.serialization.mangle.collectForMangler
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.load.java.typeEnhancement.hasEnhancedNullability
 import org.jetbrains.kotlin.types.*
-import org.jetbrains.kotlin.types.checker.SimpleClassicTypeSystemContext
 import org.jetbrains.kotlin.types.typeUtil.isUnit
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 
@@ -38,7 +36,7 @@ abstract class DescriptorMangleComputer(protected val builder: StringBuilder, pr
         }
     }
 
-    private fun StringBuilder.appendSignature(s: String) {
+    protected fun StringBuilder.appendSignature(s: String) {
         if (mode.signature) {
             append(s)
         }
@@ -193,10 +191,7 @@ abstract class DescriptorMangleComputer(protected val builder: StringBuilder, pr
 
                 if (type.isMarkedNullable) tBuilder.appendSignature(MangleConstant.Q_MARK)
 
-                // Disambiguate between 'double' and '@NotNull java.lang.Double' types in mixed Java/Kotlin class hierarchies
-                if (SimpleClassicTypeSystemContext.hasEnhancedNullability(type)) {
-                    tBuilder.appendSignature(MangleConstant.ENHANCED_NULLABILITY_MARK)
-                }
+                mangleTypePlatformSpecific(type, tBuilder)
             }
             is DynamicType -> tBuilder.appendSignature(MangleConstant.DYNAMIC_MARK)
             is FlexibleType -> {
@@ -212,6 +207,8 @@ abstract class DescriptorMangleComputer(protected val builder: StringBuilder, pr
             else -> error("Unexpected type $wtype")
         }
     }
+
+    protected open fun mangleTypePlatformSpecific(type: UnwrappedType, tBuilder: StringBuilder) {}
 
     private fun StringBuilder.mangleTypeParameterReference(typeParameter: TypeParameterDescriptor) {
         val parent = typeParameter.containingDeclaration
